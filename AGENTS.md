@@ -17,11 +17,6 @@ This repository contains a browser-based engineering layout tool for generating 
 - Unit tests (`src/geometry/engine.test.ts`) are essential for verifying constraint logic.
 - Prefer TypeScript types for all geometry objects (`src/types.ts`).
 
-## Commands
-- Install: `npm install`
-- Development: `npm run dev`
-- Tests: `npm run test` or `npx vitest run`
-
 ## Agent Guidelines
 - Any UI component utilizing SVG should use standard DOM event handling for dragging (`onPointerDown`, `onPointerMove`, `onPointerUp`) rather than adding heavy external drag-and-drop libraries.
 - React state should manage layout parameters, triggering geometry re-generation dynamically upon updates.
