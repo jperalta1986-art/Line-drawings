@@ -29,6 +29,17 @@ Ensure you have Node.js installed.
    npm test
    ```
 
+## Online Deployment
+
+This project is configured to be automatically deployed to GitHub Pages via a GitHub Actions workflow whenever code is pushed to the `main` branch.
+
+To enable online access via GitHub Pages:
+1. Go to your repository settings on GitHub.
+2. Navigate to **Pages** (under the "Code and automation" section).
+3. In the **Build and deployment** section, select **GitHub Actions** as the "Source".
+4. The `.github/workflows/deploy.yml` workflow will automatically run on the next push to `main` and deploy the application.
+5. Once deployed, the application will be accessible online. GitHub will display the final URL at the top of the Pages settings.
+
 ## Usage
 1. Modify parameters in the left sidebar to define the geometry constraints.
 2. Click **Select P1** and click inside the black part boundary to set the start point.
