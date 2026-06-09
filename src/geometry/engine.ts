@@ -138,132 +138,98 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
 
     for (let g = 0; g < numGroups; g++) {
       const isGoingDown = g % 2 === 0;
-      // The line index for circuit c in group g
-      const lineIndex = g * params.numCircuits + c;
+      const cIndex = isGoingDown ? c : (params.numCircuits - 1 - c);
+      const lineIndex = g * params.numCircuits + cIndex;
       const x = usedLines[lineIndex];
-
-      // Determine vertical extents for this run
-      // In group g, circuits need to nest their returns.
-      // Top returns: when going from UP to DOWN (g is even, g > 0)
-      // Bottom returns: when going from DOWN to UP (g is odd)
 
       let startY = 0;
       let endY = 0;
 
       if (isGoingDown) {
-        // start at top, end at bottom
-        // Top Y coordinate depends on the previous return (if g > 0)
-        // If g == 0, it's the very first run. Start at some default top Y.
-        // Let's say top of top band.
-        startY = topOfTopBand + c * returnSpacing; // just an initial entry point
         if (g > 0) {
-          // It's coming from an UP run in group g-1
-          // We need to nest. In group g-1, the circuit went UP. Then it turns right, then DOWN.
-          // To nest properly at the TOP:
-          // The outermost turn is circuit 0 (smallest x going UP, largest x going DOWN)
-          // Actually, group g-1 is UP, group g is DOWN.
-          // The lines are ordered left to right:
-          // g-1 (UP):   c=0, c=1, ..., c=N-1
-          // g (DOWN): c=0, c=1, ..., c=N-1
-          // Turning right from g-1 to g:
-          // c=N-1 has the shortest horizontal distance. It should be the INNERMOST return (lowest Y in top band).
-          // c=0 has the longest horizontal distance. It should be the OUTERMOST return (highest Y in top band).
-          // Higher Y means lower visually (top is Y=0). Wait, Y increases downwards.
-          // So outermost = lowest Y value. innermost = highest Y value (closer to FoV).
-          // Outermost (c=0) -> y = bottomOfTopBand - N*returnSpacing
-          // Innermost (c=N-1) -> y = bottomOfTopBand - 1*returnSpacing
-          startY = bottomOfTopBand - (params.numCircuits - c) * returnSpacing;
+          startY = bottomOfTopBand - (c + 1) * returnSpacing;
+        } else {
+          startY = 0; // Will be set by lead-in logic
         }
 
-        // End at bottom band for the next turn, or if it's the last run, just end somewhere.
         if (g < numGroups - 1) {
-          // The next turn will be at the bottom, from DOWN to UP.
-          // Group g (DOWN), Group g+1 (UP)
-          // Lines left to right:
-          // g (DOWN): c=0, c=1, ..., c=N-1
-          // g+1 (UP): c=0, c=1, ..., c=N-1
-          // Turning right from g to g+1:
-          // c=N-1 has shortest distance -> INNERMOST (highest Y = lowest value numerically, i.e., closer to FoV)
-          // c=0 has longest distance -> OUTERMOST (lowest Y = highest value numerically, closer to part bottom)
-          // Innermost (c=N-1): y = topOfBottomBand + 1*returnSpacing
-          // Outermost (c=0): y = topOfBottomBand + N*returnSpacing
           endY = topOfBottomBand + (params.numCircuits - c) * returnSpacing;
         } else {
-          // Last run, just end at the top of bottom band
-          endY = topOfBottomBand + c * returnSpacing;
+          endY = 0; // Will be set by lead-out logic
         }
       } else {
-        // Going UP
-        // Start at bottom
         if (g > 0) {
-          // Coming from DOWN in g-1
           startY = topOfBottomBand + (params.numCircuits - c) * returnSpacing;
         }
 
         if (g < numGroups - 1) {
-          // Next turn is at top, from UP to DOWN
-          endY = bottomOfTopBand - (params.numCircuits - c) * returnSpacing;
+          endY = bottomOfTopBand - (c + 1) * returnSpacing;
         } else {
-          // Last run
-          endY = bottomOfTopBand - c * returnSpacing;
+          endY = 0; // Will be set by lead-out logic
         }
       }
 
-      // If g > 0, we need to add the horizontal return segment to connect previous run's end to this run's start
       if (g > 0) {
-        // previous point was (prevX, prevEndY)
-        // new point is (x, startY)
-        // wait, the previous run ended at `startY` (which was `endY` of previous run)
-        // so prev point is (prevX, startY)
-        const prevX = usedLines[(g - 1) * params.numCircuits + c];
-        circuitPoints.push({ x: prevX, y: startY }); // this might be a duplicate, let's just trace carefully
-        circuitPoints.push({ x: x, y: startY });
-      } else {
-        // For the very first run, start it
+        const prevCIndex = (!isGoingDown) ? c : (params.numCircuits - 1 - c);
+        const prevX = usedLines[(g - 1) * params.numCircuits + prevCIndex];
+        circuitPoints.push({ x: prevX, y: startY });
         circuitPoints.push({ x: x, y: startY });
       }
 
       circuitPoints.push({ x: x, y: endY });
     }
 
-    // Now circuitPoints has the basic serpentine.
-    // We need to connect P1 to the start, and P2 to the end.
-    // For multiple circuits, P1 and P2 might just connect to circuit 0? Or do they connect to all?
-    // "Connect P1 to the first vertical run using only horizontal/vertical lead-in segments."
-    // If N > 1, connecting a single P1 to N circuits implies branching, which violates "independent parallel circuits".
-    // Usually, P1 and P2 are buses, but let's just make P1 connect to Circuit 0's start, and P2 to Circuit 0's end,
-    // OR we connect P1 to all circuits' starts.
-    // Wait, the prompt says: "For multiple circuits, generate independent parallel circuits... Each circuit must have its own length."
-    // And "P1 and P2 are user-selected terminal points."
-    // If there are multiple circuits, how do P1/P2 relate?
-    // Let's assume P1 connects to the starts of ALL circuits (as a bus), and P2 connects to the ends.
-    // We will just draw lead-ins from P1 to the start of each circuit, and lead-outs to P2.
-    // Let's make P1 connect to circuit c's start with orthogonal segments.
+    const firstRunIsDown = true; // Group 0 always goes down
+    const firstLineX = usedLines[c];
 
-    const startPt = circuitPoints[0];
-    const endPt = circuitPoints[circuitPoints.length - 1];
+    // Lead-in routing
+    let routeY1 = 0;
+    if (params.p1.x <= firstLineX) {
+      routeY1 = topOfTopBand - (c + 1) * returnSpacing;
+    } else {
+      routeY1 = topOfTopBand - (params.numCircuits - c) * returnSpacing;
+    }
+    // Prevent routing outside part (or inside wall clearance)
+    if (routeY1 < params.wallClearance) {
+      routeY1 = topOfTopBand - c * (returnSpacing / 2);
+    }
 
     const leadInPoints: Point[] = [];
-    const leadOutPoints: Point[] = [];
-
-    // Connect P1 to startPt
-    // Route: P1 -> (P1.x, P1_routing_y) -> (startPt.x, P1_routing_y) -> startPt
-    // We need to avoid intersecting the fov if possible, though vertical runs can.
-    // The easiest L-shape or 3-segment orthogonal path.
-    let routeY1 = topOfTopBand - params.wallClearance / 2 + c * (returnSpacing / 2); // just some Y above the top band
-    if (routeY1 < 0) routeY1 = params.wallClearance / 2;
-
     leadInPoints.push({ x: params.p1.x, y: params.p1.y });
     leadInPoints.push({ x: params.p1.x, y: routeY1 });
-    leadInPoints.push({ x: startPt.x, y: routeY1 });
-    // startPt is already the next
+    leadInPoints.push({ x: firstLineX, y: routeY1 });
 
-    // Connect P2 to endPt
-    let routeY2 = bottomOfBottomBand + params.wallClearance / 2 - c * (returnSpacing / 2);
-    if (routeY2 > partRect.height) routeY2 = partRect.height - params.wallClearance / 2;
+    // Set the true start point Y of the first group
+    circuitPoints[0].y = routeY1;
 
-    // we go from endPt -> (endPt.x, routeY2) -> (p2.x, routeY2) -> p2
-    leadOutPoints.push({ x: endPt.x, y: routeY2 });
+    // Lead-out routing
+    const lastGroup = numGroups - 1;
+    const lastGroupIsDown = lastGroup % 2 === 0;
+    const lastCIndex = lastGroupIsDown ? c : (params.numCircuits - 1 - c);
+    const lastLineX = usedLines[lastGroup * params.numCircuits + lastCIndex];
+
+    let routeY2 = 0;
+    if (lastGroupIsDown) {
+      // Exit is at bottom
+      if (params.p2.x <= lastLineX) {
+        routeY2 = topOfBottomBand + (params.numCircuits - c) * returnSpacing;
+      } else {
+        routeY2 = topOfBottomBand + (c + 1) * returnSpacing;
+      }
+    } else {
+      // Exit is at top
+      if (params.p2.x <= lastLineX) {
+        routeY2 = bottomOfTopBand - (params.numCircuits - c) * returnSpacing;
+      } else {
+        routeY2 = bottomOfTopBand - (c + 1) * returnSpacing;
+      }
+    }
+
+    // Set the true end point Y of the last group
+    circuitPoints[circuitPoints.length - 1].y = routeY2;
+
+    const leadOutPoints: Point[] = [];
+    leadOutPoints.push({ x: lastLineX, y: routeY2 });
     leadOutPoints.push({ x: params.p2.x, y: routeY2 });
     leadOutPoints.push({ x: params.p2.x, y: params.p2.y });
 
@@ -294,7 +260,10 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
       // Determine type
       let type: SegmentType = 'connection';
       if (Math.abs(pA.x - pB.x) < 1e-6) {
-        if (Math.abs(pA.y - pB.y) >= fovRect.height * 0.5) {
+        // Vertical
+        // If the segment crosses or spans a significant portion of the main run area, it's a 'vertical' run
+        // Exclude the lead-out connection at x=P2.x
+        if (Math.abs(pA.y - pB.y) >= fovRect.height * 0.5 && pA.x !== params.p2.x && pA.x !== params.p1.x) {
           type = 'vertical';
         } else {
           type = 'connection';
