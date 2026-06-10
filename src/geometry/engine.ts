@@ -49,7 +49,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
   // Determine how many vertical lines we can fit
   // We can place lines from startX up to fovRect.x + fovRect.width roughly.
   // To ensure we cover it, we can keep placing lines as long as x <= fovRect.x + fovRect.width
-  let maxFitX = partRect.width - params.wallClearance;
+  const maxFitX = partRect.width - params.wallClearance;
 
   // Let's collect all vertical line X coordinates
   const verticalXCoords: number[] = [];
@@ -150,7 +150,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
       const x = usedLines[lineIndex];
 
       let startY = 0;
-      let endY = 0;
+      let endY;
 
       // To prevent crossing:
       // When top returns happen (turning from UP to DOWN),
@@ -230,7 +230,6 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
       circuitPoints.push({ x: x, y: endY });
     }
 
-    const firstRunIsDown = true; // Group 0 always goes down
     const firstLineX = usedLines[c];
 
     // Lead-in routing
@@ -261,7 +260,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
     const lastCIndex = lastGroupIsDown ? c : (params.numCircuits - 1 - c);
     const lastLineX = usedLines[lastGroup * params.numCircuits + lastCIndex];
 
-    let routeY2 = 0;
+    let routeY2;
     if (lastGroupIsDown) {
       // Exit is at bottom. Lead-out tracks go BELOW the serpentine bottom returns.
       // Bottom serpentine returns use Y from topOfBottomBand up to topOfBottomBand + (N-1)*returnSpacing.
@@ -321,7 +320,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
       len += segLen;
 
       // Determine type
-      let type: SegmentType = 'connection';
+      let type: SegmentType;
       if (Math.abs(pA.x - pB.x) < 1e-6) {
         // Vertical
         // If the segment crosses or spans a significant portion of the main run area, it's a 'vertical' run
