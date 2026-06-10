@@ -76,6 +76,18 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
   // If circuit 0,1..N-1 go down, their first returns are at the bottom.
   // To avoid crossing, circuit N-1 must turn first (innermost), then N-2, ... then 0 (outermost).
 
+  // Each horizontal return needs some vertical space. We use `params.verticalSpacing`.
+  const returnSpacing = params.verticalSpacing;
+
+  // We need distinct layers for:
+  // 1. Top Serpentine Returns (numCircuits)
+  // 2. Top Lead-in/Lead-out Returns (numCircuits - to clear the serpentine returns)
+  // Total top layers needed = numCircuits * 2
+  // Similarly for bottom.
+  const numLayersNeeded = params.numCircuits * 2;
+  const requiredTopClearance = numLayersNeeded * returnSpacing;
+  const requiredBottomClearance = numLayersNeeded * returnSpacing;
+
   // Top return band: above FoV
   const bottomOfTopBand = fovRect.y - params.fovReturnClearance;
   const topOfTopBand = params.wallClearance;
@@ -86,15 +98,10 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
   const bottomOfBottomBand = partRect.height - params.wallClearance;
   const bottomBandAvailableHeight = bottomOfBottomBand - topOfBottomBand;
 
-  // Each horizontal return needs some vertical space. If N circuits, we need N horizontal returns stacked.
-  // Minimum vertical spacing between returns? Let's say it's also `params.verticalSpacing` or `params.strokeWidth + some margin`.
-  // Let's use `params.verticalSpacing` for horizontal spacing too, to maintain uniform gap.
-  const returnSpacing = params.verticalSpacing;
-
-  if (topBandAvailableHeight < returnSpacing * params.numCircuits) {
+  if (topBandAvailableHeight < requiredTopClearance) {
     errors.push("Not enough top clearance for horizontal returns.");
   }
-  if (bottomBandAvailableHeight < returnSpacing * params.numCircuits) {
+  if (bottomBandAvailableHeight < requiredBottomClearance) {
     errors.push("Not enough bottom clearance for horizontal returns.");
   }
 
@@ -145,25 +152,69 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
       let startY = 0;
       let endY = 0;
 
+      // To prevent crossing:
+      // When top returns happen (turning from UP to DOWN),
+      // the outermost circuit (c=0) needs the highest Y track (most negative from bottomOfTopBand),
+      // the innermost circuit (c=N-1) needs the lowest Y track.
+      // Wait, let's look at the X-order.
+      // Downward stroke: c=0 is on the left, c=N-1 is on the right.
+      // Upward stroke: c=N-1 is on the left, c=0 is on the right.
+      // At the top, turning from UP to DOWN:
+      // UP stroke comes up on the right side. DOWN stroke goes down on the left side.
+      // The circuit that is leftmost on the UP stroke (c=N-1) will connect to the rightmost on the DOWN stroke (c=N-1).
+      // Wait, cIndex for DOWN is `c`. cIndex for UP is `N - 1 - c`.
+      // So circuit `c`:
+      // Down stroke uses line `c`.
+      // Up stroke uses line `N - 1 - c`.
+      // So circuit 0 uses line 0 (leftmost) down, and line N-1 (rightmost) up. This is the OUTERMOST circuit.
+      // Circuit N-1 uses line N-1 (rightmost) down, and line 0 (leftmost) up. This is the INNERMOST circuit.
+
+      // Since circuit 0 is outermost, its horizontal return must be the widest, meaning it must be the furthest from the FoV.
+      // Top return (UP to DOWN):
+      // Circuit 0 needs the highest Y (furthest from FoV, most negative from bottomOfTopBand).
+      // Bottom return (DOWN to UP):
+      // Group 0 goes DOWN, Group 1 goes UP. Bottom return connects group 0 to group 1.
+      // Group 0 lines: 0, 1, ... N-1
+      // Group 1 lines: N, N+1, ... 2N-1
+      // circuit c goes DOWN on line c. It connects to UP on line 2N - 1 - c.
+      // Circuit 0 connects line 0 to line 2N - 1. Widest span. Outermost.
+      // Circuit N-1 connects line N-1 to line N. Narrowest span. Innermost.
+      // So at the BOTTOM, circuit 0 is outermost, circuit N-1 is innermost.
+      // Outermost (c=0) needs furthest track from FoV -> lowest track -> highest Y.
+      // Innermost (c=N-1) needs closest track to FoV -> highest track -> lowest Y.
+      const bottomReturnY = topOfBottomBand + (params.numCircuits - 1 - c) * returnSpacing;
+
+      // Now consider TOP return: connects g=1 (UP) to g=2 (DOWN).
+      // Group 1 lines: N, N+1, ... 2N-1
+      // Group 2 lines: 2N, 2N+1, ... 3N-1
+      // Circuit c is on UP line N + (N - 1 - c) = 2N - 1 - c.
+      // Circuit c is on DOWN line 2N + c.
+      // Circuit 0 is on UP line 2N-1. It connects to DOWN line 2N. Narrowest span! Innermost!
+      // Circuit N-1 is on UP line N. It connects to DOWN line 3N-1. Widest span! Outermost!
+      // So at the TOP, the nesting order is REVERSED.
+      // Outermost is c=N-1. It needs furthest track from FoV -> highest track -> lowest Y.
+      // Innermost is c=0. It needs closest track to FoV -> lowest track -> highest Y.
+      const topReturnY = bottomOfTopBand - (c) * returnSpacing;
+
       if (isGoingDown) {
         if (g > 0) {
-          startY = bottomOfTopBand - (c + 1) * returnSpacing;
+          startY = topReturnY;
         } else {
           startY = 0; // Will be set by lead-in logic
         }
 
         if (g < numGroups - 1) {
-          endY = topOfBottomBand + (params.numCircuits - c) * returnSpacing;
+          endY = bottomReturnY;
         } else {
           endY = 0; // Will be set by lead-out logic
         }
       } else {
         if (g > 0) {
-          startY = topOfBottomBand + (params.numCircuits - c) * returnSpacing;
+          startY = bottomReturnY;
         }
 
         if (g < numGroups - 1) {
-          endY = bottomOfTopBand - (c + 1) * returnSpacing;
+          endY = topReturnY;
         } else {
           endY = 0; // Will be set by lead-out logic
         }
@@ -183,15 +234,17 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
     const firstLineX = usedLines[c];
 
     // Lead-in routing
-    let routeY1 = 0;
-    if (params.p1.x <= firstLineX) {
-      routeY1 = topOfTopBand - (c + 1) * returnSpacing;
-    } else {
-      routeY1 = topOfTopBand - (params.numCircuits - c) * returnSpacing;
-    }
+    // Lead-in top tracks go in the layers ABOVE the serpentine top returns.
+    // Top serpentine returns use Y coordinates from bottomOfTopBand down to bottomOfTopBand - (N-1)*returnSpacing.
+    // So the highest top serpentine return is at bottomOfTopBand - (N-1)*returnSpacing.
+    // Lead-in tracks should be ABOVE that (lower Y values).
+    const topSerpentineHighestY = bottomOfTopBand - (params.numCircuits - 1) * returnSpacing;
+    let routeY1 = topSerpentineHighestY - (c + 1) * returnSpacing;
+
     // Prevent routing outside part (or inside wall clearance)
     if (routeY1 < params.wallClearance) {
-      routeY1 = topOfTopBand - c * (returnSpacing / 2);
+      // Fallback
+      routeY1 = params.wallClearance + c * (returnSpacing / 2);
     }
 
     const leadInPoints: Point[] = [];
@@ -210,18 +263,28 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
 
     let routeY2 = 0;
     if (lastGroupIsDown) {
-      // Exit is at bottom
-      if (params.p2.x <= lastLineX) {
-        routeY2 = topOfBottomBand + (params.numCircuits - c) * returnSpacing;
-      } else {
-        routeY2 = topOfBottomBand + (c + 1) * returnSpacing;
+      // Exit is at bottom. Lead-out tracks go BELOW the serpentine bottom returns.
+      // Bottom serpentine returns use Y from topOfBottomBand up to topOfBottomBand + (N-1)*returnSpacing.
+      // So the lowest bottom serpentine return is topOfBottomBand + (N-1)*returnSpacing.
+      // Lead-out tracks should be BELOW that (higher Y values).
+      // We want to avoid crossing, so if routing left (p2.x <= lastLineX) we need concentric layers.
+      // Outermost circuit (c=0) needs the outermost layer (highest Y).
+      const bottomSerpentineLowestY = topOfBottomBand + (params.numCircuits - 1) * returnSpacing;
+      routeY2 = bottomSerpentineLowestY + (params.numCircuits - c) * returnSpacing;
+      if (routeY2 > partRect.height - params.wallClearance) {
+        routeY2 = partRect.height - params.wallClearance - c * (returnSpacing / 2);
       }
     } else {
-      // Exit is at top
-      if (params.p2.x <= lastLineX) {
-        routeY2 = bottomOfTopBand - (params.numCircuits - c) * returnSpacing;
-      } else {
-        routeY2 = bottomOfTopBand - (c + 1) * returnSpacing;
+      // Exit is at top. Lead-out tracks go ABOVE the serpentine top returns.
+      // But lead-ins are already there. We must allocate separate layers or share them if they don't cross.
+      // Actually, lead-in is at X=p1.x to firstLineX.
+      // Lead-out is at X=lastLineX to p2.x.
+      // If p1 is on the left and p2 is on the left, lead-out has to traverse the whole width back.
+      // It must be placed even higher (lower Y) than lead-ins, or we interleave carefully.
+      // Let's place lead-outs ABOVE lead-ins.
+      routeY2 = routeY1 - params.numCircuits * returnSpacing;
+      if (routeY2 < params.wallClearance) {
+        routeY2 = params.wallClearance + c * (returnSpacing / 4);
       }
     }
 
