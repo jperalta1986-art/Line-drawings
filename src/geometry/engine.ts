@@ -49,7 +49,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
   // Determine how many vertical lines we can fit
   // We can place lines from startX up to fovRect.x + fovRect.width roughly.
   // To ensure we cover it, we can keep placing lines as long as x <= fovRect.x + fovRect.width
-  let maxFitX = partRect.width - params.wallClearance;
+  const maxFitX = partRect.width - params.wallClearance;
 
   // Let's collect all vertical line X coordinates
   const verticalXCoords: number[] = [];
@@ -143,7 +143,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
       const x = usedLines[lineIndex];
 
       let startY = 0;
-      let endY = 0;
+      let endY;
 
       if (isGoingDown) {
         if (g > 0) {
@@ -179,20 +179,10 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
       circuitPoints.push({ x: x, y: endY });
     }
 
-    const firstRunIsDown = true; // Group 0 always goes down
-    const firstLineX = usedLines[c];
+        const firstLineX = usedLines[c];
 
     // Lead-in routing
-    let routeY1 = 0;
-    if (params.p1.x <= firstLineX) {
-      routeY1 = topOfTopBand - (c + 1) * returnSpacing;
-    } else {
-      routeY1 = topOfTopBand - (params.numCircuits - c) * returnSpacing;
-    }
-    // Prevent routing outside part (or inside wall clearance)
-    if (routeY1 < params.wallClearance) {
-      routeY1 = topOfTopBand - c * (returnSpacing / 2);
-    }
+    const routeY1 = params.wallClearance + c * returnSpacing;
 
     const leadInPoints: Point[] = [];
     leadInPoints.push({ x: params.p1.x, y: params.p1.y });
@@ -208,29 +198,26 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
     const lastCIndex = lastGroupIsDown ? c : (params.numCircuits - 1 - c);
     const lastLineX = usedLines[lastGroup * params.numCircuits + lastCIndex];
 
-    let routeY2 = 0;
-    if (lastGroupIsDown) {
-      // Exit is at bottom
-      if (params.p2.x <= lastLineX) {
-        routeY2 = topOfBottomBand + (params.numCircuits - c) * returnSpacing;
-      } else {
-        routeY2 = topOfBottomBand + (c + 1) * returnSpacing;
-      }
-    } else {
-      // Exit is at top
-      if (params.p2.x <= lastLineX) {
-        routeY2 = bottomOfTopBand - (params.numCircuits - c) * returnSpacing;
-      } else {
-        routeY2 = bottomOfTopBand - (c + 1) * returnSpacing;
-      }
-    }
-
-    // Set the true end point Y of the last group
-    circuitPoints[circuitPoints.length - 1].y = routeY2;
-
     const leadOutPoints: Point[] = [];
-    leadOutPoints.push({ x: lastLineX, y: routeY2 });
-    leadOutPoints.push({ x: params.p2.x, y: routeY2 });
+
+    // Bottom envelope:
+    const bottomOutY = params.partHeight - params.wallClearance - c * returnSpacing;
+
+    if (lastGroupIsDown) {
+      circuitPoints[circuitPoints.length - 1].y = bottomOutY;
+      leadOutPoints.push({ x: lastLineX, y: bottomOutY });
+      leadOutPoints.push({ x: params.p2.x, y: bottomOutY });
+    } else {
+      const rightOutX = params.partWidth - params.wallClearance - c * returnSpacing;
+      const topOutY = params.wallClearance + c * returnSpacing;
+
+      circuitPoints[circuitPoints.length - 1].y = topOutY;
+
+      leadOutPoints.push({ x: lastLineX, y: topOutY });
+      leadOutPoints.push({ x: rightOutX, y: topOutY });
+      leadOutPoints.push({ x: rightOutX, y: bottomOutY });
+      leadOutPoints.push({ x: params.p2.x, y: bottomOutY });
+    }
     leadOutPoints.push({ x: params.p2.x, y: params.p2.y });
 
     circuitPoints = [...leadInPoints, ...circuitPoints, ...leadOutPoints];
@@ -260,16 +247,11 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
       // Determine type
       let type: SegmentType = 'connection';
       if (Math.abs(pA.x - pB.x) < 1e-6) {
-        // Vertical
-        // If the segment crosses or spans a significant portion of the main run area, it's a 'vertical' run
-        // Exclude the lead-out connection at x=P2.x
-        if (Math.abs(pA.y - pB.y) >= fovRect.height * 0.5 && pA.x !== params.p2.x && pA.x !== params.p1.x) {
+        if (Math.abs(pA.y - pB.y) >= fovRect.height * 0.5 && pA.x !== params.p2.x && pA.x !== params.p1.x && pA.x !== params.partWidth - params.wallClearance && pA.x !== params.partWidth - params.wallClearance - c * returnSpacing) {
           type = 'vertical';
-        } else {
-          type = 'connection';
         }
       } else {
-        type = 'horizontal-return'; // simplistic, will refine later if needed
+        type = 'horizontal-return';
       }
 
       segments.push({
