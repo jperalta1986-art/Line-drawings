@@ -50,8 +50,9 @@ describe('Geometry Engine', () => {
       ...defaultLayoutParams,
       numCircuits: 3,
       verticalSpacing: 5,
-      fovY: 20,
+      fovY: 40,
       fovHeight: 30,
+      partHeight: 120, // ensure enough room
       p1: { x: 5, y: 5 },
       p2: { x: 95, y: 65 }
     };
