@@ -238,11 +238,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
     // So the highest top serpentine return is at bottomOfTopBand - (N-1)*returnSpacing.
     // Lead-in tracks should be ABOVE that (lower Y values).
     const topSerpentineHighestY = bottomOfTopBand - (params.numCircuits - 1) * returnSpacing;
-
-    // For lead-in, we are routing from P1 (left) to firstLineX (right).
-    // The innermost circuit is c=(N-1). The outermost is c=0.
-    // For left-to-right routing, outermost needs lowest Y (furthest from FoV) -> subtract more.
-    let routeY1 = topSerpentineHighestY - (params.numCircuits - c) * returnSpacing;
+    let routeY1 = topSerpentineHighestY - (c + 1) * returnSpacing;
 
     // Prevent routing outside part (or inside wall clearance)
     if (routeY1 < params.wallClearance) {
