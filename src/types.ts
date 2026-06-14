@@ -48,18 +48,18 @@ export interface LayoutParams {
 }
 
 export const defaultLayoutParams: LayoutParams = {
-  partWidth: 200,
-  partHeight: 200,
-  fovX: 50,
-  fovY: 50,
-  fovWidth: 100,
-  fovHeight: 100,
+  partWidth: 100,
+  partHeight: 70,
+  fovX: 20,
+  fovY: 15,
+  fovWidth: 60,
+  fovHeight: 40,
 
-  numCircuits: 3,
+  numCircuits: 1,
   verticalSpacing: 5,
-  wallClearance: 0,
+  wallClearance: 2,
   fovReturnClearance: 2,
-  strokeWidth: 0.5,
+  strokeWidth: 0.6,
 
   p1: null,
   p2: null,

@@ -13,17 +13,16 @@ describe('Geometry Engine', () => {
     const params = {
       ...defaultLayoutParams,
       p1: { x: 5, y: 5 },
-      p2: { x: 195, y: 190 }
+      p2: { x: 95, y: 65 }
     };
 
     const result = generateSerpentineLayout(params);
     expect(result.validationErrors).toHaveLength(0);
-    expect(result.circuits).toHaveLength(3);
+    expect(result.circuits).toHaveLength(1);
 
-
+    const circuit = result.circuits[0];
     let totalCalculatedLen = 0;
 
-    for (const circuit of result.circuits) {
     for (const segment of circuit.segments) {
       // 1. All segments are orthogonal
       expect(isSegmentOrthogonal(segment)).toBe(true);
@@ -41,7 +40,6 @@ describe('Geometry Engine', () => {
       const dy = segment.y1 - segment.y2;
       totalCalculatedLen += Math.sqrt(dx*dx + dy*dy);
     }
-    }
 
     // Total length check
     expect(Math.abs(result.totalLengthMm - totalCalculatedLen)).toBeLessThan(1e-4);
@@ -52,9 +50,11 @@ describe('Geometry Engine', () => {
       ...defaultLayoutParams,
       numCircuits: 3,
       verticalSpacing: 5,
-      partHeight: 200, partWidth: 200, fovY: 50, fovX: 50, fovWidth: 100, fovHeight: 100, // ensure enough room
-      p1: { x: 5, y: 190 },
-      p2: { x: 195, y: 190 }
+      fovY: 40,
+      fovHeight: 30,
+      partHeight: 120, // ensure enough room
+      p1: { x: 5, y: 5 },
+      p2: { x: 95, y: 65 }
     };
 
     const result = generateSerpentineLayout(params);
@@ -83,7 +83,7 @@ describe('Geometry Engine', () => {
     const params = {
       ...defaultLayoutParams,
       p1: { x: -10, y: 10 },
-      p2: { x: 195, y: 190 }
+      p2: { x: 95, y: 65 }
     };
     const result = generateSerpentineLayout(params);
     expect(result.validationErrors).toContain("P1 and P2 must be inside the part boundary.");
@@ -93,7 +93,6 @@ describe('Geometry Engine', () => {
     const params = {
       ...defaultLayoutParams,
       partHeight: 40,
-      partWidth: 100,
       fovY: 15,
       fovHeight: 25, // FoV occupies 15 to 40. Top band = 0..15. Bottom band = 40..40 (0 size).
       wallClearance: 5,
