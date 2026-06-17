@@ -106,3 +106,26 @@ describe('Geometry Engine', () => {
     expect(result.validationErrors.length).toBeGreaterThan(0);
   });
 });
+
+describe('Geometry Layout Intersection Validation', () => {
+  it('should not have self-intersections or cross collisions on default layout', () => {
+    const params = {
+      ...defaultLayoutParams,
+      p1: { x: 5, y: 5 },
+      p2: { x: 195, y: 190 }
+    };
+    const result = generateSerpentineLayout(params);
+    expect(result.validationErrors).toHaveLength(0);
+  });
+
+  it('should not have intersections with perimeter envelope turned off', () => {
+    const params = {
+      ...defaultLayoutParams,
+      usePerimeterEnvelope: false,
+      p1: { x: 5, y: 5 },
+      p2: { x: 195, y: 190 }
+    };
+    const result = generateSerpentineLayout(params);
+    expect(result.validationErrors).toHaveLength(0);
+  });
+});
