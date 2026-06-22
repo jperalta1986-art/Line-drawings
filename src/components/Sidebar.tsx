@@ -15,7 +15,7 @@ interface SidebarProps {
   circuitLengths: number[];
   validationErrors: string[];
   onExportSvg: () => void;
-  onExportJson: () => void;
+  onExportDxf: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   circuitLengths,
   validationErrors,
   onExportSvg,
-  onExportJson
+  onExportDxf
 }) => {
   const updateParam = (key: keyof LayoutParams, value: number) => {
     setParams(prev => ({ ...prev, [key]: value }));
@@ -129,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
         <div className="export-buttons">
           <button onClick={onExportSvg}>Export SVG</button>
-          <button onClick={onExportJson}>Export JSON</button>
+          <button onClick={onExportDxf}>Export DXF</button>
         </div>
       </div>
     </div>

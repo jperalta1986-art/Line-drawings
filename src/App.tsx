@@ -4,6 +4,7 @@ import { PlotArea } from './components/PlotArea';
 import { defaultLayoutParams } from "./types";
 import type { LayoutParams, Point, Circuit } from './types';
 import { generateSerpentineLayout } from './geometry/engine';
+import Drawing from 'dxf-writer';
 import './App.css';
 
 function App() {
@@ -72,17 +73,47 @@ function App() {
     document.body.removeChild(link);
   };
 
-  const handleExportJson = () => {
-    const data = {
-      params,
-      circuits,
-      totalLengthMm
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const handleExportDxf = () => {
+    const d = new Drawing();
+    d.setUnits('Millimeters');
+
+    d.addLayer('PartBoundary', Drawing.ACI.WHITE, 'CONTINUOUS');
+    d.setActiveLayer('PartBoundary');
+    d.drawPolyline([
+      [0, 0],
+      [params.partWidth, 0],
+      [params.partWidth, params.partHeight],
+      [0, params.partHeight],
+      [0, 0]
+    ]);
+
+    d.addLayer('FoVBoundary', Drawing.ACI.RED, 'CONTINUOUS');
+    d.setActiveLayer('FoVBoundary');
+    d.drawPolyline([
+      [params.fovX, params.fovY],
+      [params.fovX + params.fovWidth, params.fovY],
+      [params.fovX + params.fovWidth, params.fovY + params.fovHeight],
+      [params.fovX, params.fovY + params.fovHeight],
+      [params.fovX, params.fovY]
+    ]);
+
+    circuits.forEach((circuit, index) => {
+      const layerName = `Circuit_${index + 1}`;
+      d.addLayer(layerName, Drawing.ACI.GREEN, 'CONTINUOUS');
+      d.setActiveLayer(layerName);
+
+      const pts = circuit.points.map(p => [p.x, p.y] as [number, number]);
+      if (pts.length > 0) {
+          d.drawPolyline(pts);
+      }
+    });
+
+    const dxfString = d.toDxfString();
+    const blob = new Blob([dxfString], { type: 'application/dxf' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'layout.json';
+    link.download = 'layout.dxf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -104,7 +135,7 @@ function App() {
         circuitLengths={circuits.map(c => c.lengthMm)}
         validationErrors={validationErrors}
         onExportSvg={handleExportSvg}
-        onExportJson={handleExportJson}
+        onExportDxf={handleExportDxf}
       />
       <div className="main-content">
         <PlotArea
