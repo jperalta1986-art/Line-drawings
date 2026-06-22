@@ -41,7 +41,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
   // 1. Calculate available vertical spacing and number of runs
 
   // Start the first line such that the whole pattern is roughly centered in the FOV, or just start at fovRect.x
-  let startX = fovRect.x;
+  let startX = fovRect.x - params.fovLateralClearance;
 
   // Make sure startX is within part width - wall clearance
   if (startX < params.wallClearance) startX = params.wallClearance;
@@ -54,7 +54,7 @@ export function generateSerpentineLayout(params: LayoutParams): LayoutResult {
   // Let's collect all vertical line X coordinates
   const verticalXCoords: number[] = [];
   let currX = startX;
-  while (currX <= maxFitX && currX <= fovRect.x + fovRect.width) {
+  while (currX <= maxFitX && currX <= fovRect.x + fovRect.width + params.fovLateralClearance) {
     verticalXCoords.push(currX);
     currX += params.verticalSpacing;
   }
