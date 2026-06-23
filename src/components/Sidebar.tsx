@@ -16,6 +16,8 @@ interface SidebarProps {
   validationErrors: string[];
   onExportSvg: () => void;
   onExportDxf: () => void;
+  includeFovInDxf: boolean;
+  setIncludeFovInDxf: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -32,7 +34,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   circuitLengths,
   validationErrors,
   onExportSvg,
-  onExportDxf
+  onExportDxf,
+  includeFovInDxf,
+  setIncludeFovInDxf
 }) => {
   const updateParam = (key: keyof LayoutParams, value: number) => {
     setParams(prev => ({ ...prev, [key]: value }));
@@ -131,6 +135,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="export-buttons">
           <button onClick={onExportSvg}>Export SVG</button>
           <button onClick={onExportDxf}>Export DXF</button>
+        </div>
+        <div className="input-group" style={{ marginTop: '10px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              checked={includeFovInDxf}
+              onChange={(e) => setIncludeFovInDxf(e.target.checked)}
+            />
+            Include FoV in DXF
+          </label>
         </div>
       </div>
     </div>

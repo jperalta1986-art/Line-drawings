@@ -13,6 +13,8 @@ function App() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [totalLengthMm, setTotalLengthMm] = useState<number>(0);
 
+  const [includeFovInDxf, setIncludeFovInDxf] = useState<boolean>(true);
+
   const [selectingP1, setSelectingP1] = useState(false);
   const [selectingP2, setSelectingP2] = useState(false);
 
@@ -87,15 +89,17 @@ function App() {
       [0, 0]
     ]);
 
-    d.addLayer('FoVBoundary', Drawing.ACI.RED, 'CONTINUOUS');
-    d.setActiveLayer('FoVBoundary');
-    d.drawPolyline([
-      [params.fovX, params.fovY],
-      [params.fovX + params.fovWidth, params.fovY],
-      [params.fovX + params.fovWidth, params.fovY + params.fovHeight],
-      [params.fovX, params.fovY + params.fovHeight],
-      [params.fovX, params.fovY]
-    ]);
+    if (includeFovInDxf) {
+      d.addLayer('FoVBoundary', Drawing.ACI.RED, 'CONTINUOUS');
+      d.setActiveLayer('FoVBoundary');
+      d.drawPolyline([
+        [params.fovX, params.fovY],
+        [params.fovX + params.fovWidth, params.fovY],
+        [params.fovX + params.fovWidth, params.fovY + params.fovHeight],
+        [params.fovX, params.fovY + params.fovHeight],
+        [params.fovX, params.fovY]
+      ]);
+    }
 
     circuits.forEach((circuit, index) => {
       const layerName = `Circuit_${index + 1}`;
@@ -136,6 +140,8 @@ function App() {
         validationErrors={validationErrors}
         onExportSvg={handleExportSvg}
         onExportDxf={handleExportDxf}
+        includeFovInDxf={includeFovInDxf}
+        setIncludeFovInDxf={setIncludeFovInDxf}
       />
       <div className="main-content">
         <PlotArea
