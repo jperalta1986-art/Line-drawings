@@ -82,6 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {renderInput('Vertical Spacing (mm)', 'verticalSpacing', 1, 20, 0.1)}
         {renderInput('Wall Clearance (mm)', 'wallClearance', 0, 20, 0.1)}
         {renderInput('FoV Return Clearance (mm)', 'fovReturnClearance', 0, 20, 0.1)}
+        {renderInput('FoV Lateral Clearance (mm)', 'fovLateralClearance', 0, 20, 0.1)}
         {renderInput('Stroke Width (mm)', 'strokeWidth', 0.1, 5, 0.1)}
       </div>
 

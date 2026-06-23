@@ -40,6 +40,7 @@ export interface LayoutParams {
   verticalSpacing: number; // default 5 mm
   wallClearance: number; // default 2 mm
   fovReturnClearance: number; // default 2 mm
+  fovLateralClearance: number; // default 0 mm
   strokeWidth: number; // default 0.6 mm
 
   p1: Point | null;
@@ -59,6 +60,7 @@ export const defaultLayoutParams: LayoutParams = {
   verticalSpacing: 5,
   wallClearance: 0,
   fovReturnClearance: 2,
+  fovLateralClearance: 0,
   strokeWidth: 0.5,
 
   p1: null,
